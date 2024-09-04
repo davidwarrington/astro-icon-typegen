@@ -1,8 +1,9 @@
 ---
+import { type IconName } from 'astro-icons';
 import { parse } from 'node-html-parser';
 
 interface Props {
-  icon: string;
+  icon: IconName;
 }
 
 function getSVG(name: string) {

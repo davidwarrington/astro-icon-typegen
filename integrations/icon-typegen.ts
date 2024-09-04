@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, writeFile } from "node:fs/promises";
 import { join, parse } from "node:path";
 import { type AstroIntegration, type AstroIntegrationLogger } from "astro";
 
@@ -36,18 +36,36 @@ declare module 'astro-icons' {
  * @param path Relative to srcDir
  */
 export function iconTypegen(path: string): AstroIntegration {
+  let sourceDirectory: string;
+  let typeDefinitionModule: URL;
+
   return {
     name: INTEGRATION_NAME,
     hooks: {
       "astro:config:done": async ({ config, injectTypes, logger }) => {
-        const sourceDirectory = join(config.srcDir.pathname, path);
+        sourceDirectory = join(config.srcDir.pathname, path);
         const typeDefinitions = await getTypeDefinitions(sourceDirectory, {
           logger,
         });
 
-        injectTypes({
+        typeDefinitionModule = injectTypes({
           content: typeDefinitions,
           filename: "icons.d.ts",
+        });
+      },
+      "astro:server:setup": async ({ logger, server }) => {
+        server.watcher.add(sourceDirectory).on("all", async (_, path) => {
+          const isInSourceDirectory = path.startsWith(sourceDirectory);
+
+          if (!isInSourceDirectory) {
+            return;
+          }
+
+          const typeDefinitions = await getTypeDefinitions(sourceDirectory, {
+            logger,
+          });
+
+          await writeFile(typeDefinitionModule, typeDefinitions);
         });
       },
     },
