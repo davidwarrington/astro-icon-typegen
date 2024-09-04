@@ -1,0 +1,45 @@
+---
+import { parse } from 'node-html-parser';
+
+interface Props {
+  icon: string;
+}
+
+function getSVG(name: string) {
+  const filepath = `/src/svg/${name}.svg`;
+  const files = import.meta.glob<string>('/src/svg/**/*.svg', {
+    eager: true,
+    import: 'default',
+    query: '?raw',
+  });
+
+  if (!(filepath in files)) {
+    throw new Error(`${filepath} not found`);
+  }
+
+  const root = parse(files[filepath]);
+
+  const svg = root.querySelector('svg');
+
+  if (!svg) {
+    throw new Error(`No <svg> found in ${filepath}`);
+  }
+
+  const { attributes, innerHTML } = svg;
+
+  return {
+    attributes,
+    innerHTML,
+  };
+}
+
+const { icon, ...attributes } = Astro.props;
+const { attributes: baseAttributes, innerHTML } = getSVG(icon);
+
+const svgAttributes = { ...baseAttributes, ...attributes };
+---
+
+<svg
+  {...svgAttributes}
+  set:html={innerHTML}
+></svg>
